@@ -82,27 +82,23 @@ export function SearchBox({ onSelect }: SearchBoxProps) {
         }}
         onFocus={() => setOpen(true)}
         placeholder="輸入股票代號或名稱，例如 2330 或 台積電"
-        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+        className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-2.5 text-sm text-gray-100 shadow-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-950"
       />
       {open && (query.trim() || loading) && (
-        <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
-          {loading && (
-            <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">搜尋中…</div>
-          )}
-          {!loading && error && (
-            <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{error}</div>
-          )}
+        <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-gray-700 bg-gray-900 shadow-lg">
+          {loading && <div className="px-4 py-3 text-sm text-gray-400">搜尋中…</div>}
+          {!loading && error && <div className="px-4 py-3 text-sm text-gray-400">{error}</div>}
           {!loading &&
             results.map((stock) => (
               <button
                 key={stock.symbol}
                 onClick={() => handleSelect(stock)}
-                className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-gray-800"
               >
-                <span className="font-medium text-gray-900 dark:text-gray-100">
+                <span className="font-medium text-gray-100">
                   {stock.symbol} {stock.name}
                 </span>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-500">
                   {stock.market === "TSE" ? "上市" : "上櫃"}
                 </span>
               </button>

@@ -13,15 +13,15 @@ interface RangeSelectorProps {
 
 export function RangeSelector({ value, onChange }: RangeSelectorProps) {
   return (
-    <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-800 dark:bg-gray-900">
+    <div className="inline-flex rounded-lg border border-gray-800 bg-gray-900 p-1">
       {RANGES.map((r) => (
         <button
           key={r.value}
           onClick={() => onChange(r.value)}
           className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             value === r.value
-              ? "bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-gray-100"
-              : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+              ? "bg-gray-700 text-gray-100 shadow-sm"
+              : "text-gray-500 hover:text-gray-300"
           }`}
         >
           {r.label}

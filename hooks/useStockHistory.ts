@@ -2,28 +2,23 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchHistory, StockServiceError } from "@/lib/stockService";
-import type { HistoryPoint, HistoryRange } from "@/types/stock";
+import type { HistoryPoint } from "@/types/stock";
 
-interface UseStockHistoryResult {
-  data: HistoryPoint[];
-  loading: boolean;
-  error: string | null;
-  refetch: () => void;
-}
-
-export function useStockHistory(
-  symbol: string | null,
-  range: HistoryRange
-): UseStockHistoryResult {
+/**
+ * Always fetches a full year of daily history — enough warm-up data for
+ * MA20/KD9/MACD(12,26,9) to be fully computed even when the visible range is
+ * later sliced down to 1m/3m on the client. One request per symbol instead
+ * of one per range switch.
+ */
+export function useStockHistory(symbol: string | null) {
   const [data, setData] = useState<HistoryPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
 
-  const key = `${symbol ?? ""}|${range}`;
-  const [loadedFor, setLoadedFor] = useState(key);
-  if (loadedFor !== key) {
-    setLoadedFor(key);
+  const [loadedFor, setLoadedFor] = useState(symbol);
+  if (loadedFor !== symbol) {
+    setLoadedFor(symbol);
     setData([]);
     setError(null);
   }
@@ -33,7 +28,7 @@ export function useStockHistory(
     const id = ++requestId.current;
     setLoading(true);
     try {
-      const points = await fetchHistory(symbol, range);
+      const points = await fetchHistory(symbol, "1y");
       if (id !== requestId.current) return;
       setData(points);
       setError(null);
@@ -44,12 +39,12 @@ export function useStockHistory(
     } finally {
       if (id === requestId.current) setLoading(false);
     }
-  }, [symbol, range]);
+  }, [symbol]);
 
   useEffect(() => {
     if (!symbol) return;
     load();
-  }, [symbol, range, load]);
+  }, [symbol, load]);
 
   return { data, loading, error, refetch: load };
 }
