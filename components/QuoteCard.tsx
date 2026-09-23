@@ -7,6 +7,8 @@ interface QuoteCardProps {
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  /** Today's volume ÷ recent average daily volume. Null when not yet computable. */
+  volumeRatio: number | null;
 }
 
 function formatNumber(n: number | null, digits = 2): string {
@@ -23,7 +25,7 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("zh-TW", { hour12: false });
 }
 
-export function QuoteCard({ quote, info, loading, error, onRetry }: QuoteCardProps) {
+export function QuoteCard({ quote, info, loading, error, onRetry, volumeRatio }: QuoteCardProps) {
   if (error) {
     return <ErrorBanner message={error} onRetry={onRetry} />;
   }
@@ -100,6 +102,12 @@ export function QuoteCard({ quote, info, loading, error, onRetry }: QuoteCardPro
         <div>
           <dt className="text-xs text-gray-500">成交量（張）</dt>
           <dd className="text-sm font-medium text-gray-200">{formatVolume(quote.volume)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-gray-500">量比</dt>
+          <dd className="text-sm font-medium text-gray-200">
+            {volumeRatio === null ? "—" : `${volumeRatio.toFixed(2)} 倍`}
+          </dd>
         </div>
       </dl>
     </div>

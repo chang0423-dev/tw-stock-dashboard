@@ -155,7 +155,10 @@ export function CandlestickChart({ data }: CandlestickChartProps) {
             </span>
           </span>
           <span>
-            量 <span className="text-gray-200">{active.volume.toLocaleString("zh-TW")}</span>
+            量（張）{" "}
+            <span className="text-gray-200">
+              {active.volume.toLocaleString("zh-TW", { maximumFractionDigits: 0 })}
+            </span>
           </span>
         </div>
       )}

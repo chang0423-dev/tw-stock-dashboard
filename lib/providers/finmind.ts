@@ -142,7 +142,9 @@ async function fetchHistory(symbol: string, range: HistoryRange): Promise<Histor
       high: r.max,
       low: r.min,
       close: r.close,
-      volume: r.Trading_Volume,
+      // Trading_Volume is reported in 股 (shares); convert to 張 (board lots)
+      // to match the 張-denominated volume shown elsewhere (quote, margin, institutional flow).
+      volume: r.Trading_Volume / 1000,
     }));
 }
 

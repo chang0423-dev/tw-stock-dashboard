@@ -9,6 +9,7 @@ export interface TechnicalPoint extends HistoryPoint {
   dif: number | null;
   macdSignal: number | null;
   osc: number | null;
+  rsi: number | null;
 }
 
 function sma(values: number[], period: number): (number | null)[] {
@@ -96,6 +97,41 @@ function computeMACD(closes: number[], fast: number, slow: number, signalPeriod:
   return { dif, signal, osc };
 }
 
+/** Wilder-smoothed RSI over `period` days. */
+function computeRSI(closes: number[], period: number): (number | null)[] {
+  const result: (number | null)[] = [];
+  let avgGain = 0;
+  let avgLoss = 0;
+
+  for (let i = 0; i < closes.length; i++) {
+    if (i === 0) {
+      result.push(null);
+      continue;
+    }
+    const change = closes[i] - closes[i - 1];
+    const gain = Math.max(change, 0);
+    const loss = Math.max(-change, 0);
+
+    if (i <= period) {
+      avgGain += gain;
+      avgLoss += loss;
+      if (i < period) {
+        result.push(null);
+        continue;
+      }
+      // i === period: seed the average from the first `period` changes
+      avgGain /= period;
+      avgLoss /= period;
+    } else {
+      avgGain = (avgGain * (period - 1) + gain) / period;
+      avgLoss = (avgLoss * (period - 1) + loss) / period;
+    }
+    const rsi = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+    result.push(rsi);
+  }
+  return result;
+}
+
 export function computeTechnicalSeries(points: HistoryPoint[]): TechnicalPoint[] {
   const closes = points.map((p) => p.close);
   const ma5 = sma(closes, 5);
@@ -103,6 +139,7 @@ export function computeTechnicalSeries(points: HistoryPoint[]): TechnicalPoint[]
   const ma20 = sma(closes, 20);
   const { k, d } = computeKD(points, 9);
   const { dif, signal, osc } = computeMACD(closes, 12, 26, 9);
+  const rsi = computeRSI(closes, 14);
 
   return points.map((p, i) => ({
     ...p,
@@ -114,6 +151,7 @@ export function computeTechnicalSeries(points: HistoryPoint[]): TechnicalPoint[]
     dif: dif[i],
     macdSignal: signal[i],
     osc: osc[i],
+    rsi: rsi[i],
   }));
 }
 
