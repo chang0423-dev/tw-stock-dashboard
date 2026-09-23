@@ -1,5 +1,12 @@
 import { withCache } from "@/lib/cache";
-import type { HistoryPoint, HistoryRange, Market, StockSummary } from "@/types/stock";
+import type {
+  HistoryPoint,
+  HistoryRange,
+  InstitutionalFlowPoint,
+  Market,
+  MarginTradingPoint,
+  StockSummary,
+} from "@/types/stock";
 
 const FINMIND_BASE = "https://api.finmindtrade.com/api/v4/data";
 
@@ -25,6 +32,23 @@ interface FinMindStockPriceRow {
   max: number;
   min: number;
   close: number;
+}
+
+interface FinMindInstitutionalRow {
+  date: string;
+  stock_id: string;
+  buy: number;
+  sell: number;
+  name: string;
+}
+
+interface FinMindMarginRow {
+  date: string;
+  stock_id: string;
+  MarginPurchaseTodayBalance: number;
+  MarginPurchaseYesterdayBalance: number;
+  ShortSaleTodayBalance: number;
+  ShortSaleYesterdayBalance: number;
 }
 
 function buildUrl(params: Record<string, string>): string {
@@ -125,6 +149,85 @@ async function fetchHistory(symbol: string, range: HistoryRange): Promise<Histor
 export async function getHistory(symbol: string, range: HistoryRange): Promise<HistoryPoint[]> {
   return withCache(`finmind:history:${symbol}:${range}`, 10 * 60 * 1000, () =>
     fetchHistory(symbol, range)
+  );
+}
+
+/** Institutional buy/sell is reported in 股 (shares); convert to 張 (board lots) for display. */
+function toLots(shares: number): number {
+  return shares / 1000;
+}
+
+async function fetchInstitutionalFlow(
+  symbol: string,
+  range: HistoryRange
+): Promise<InstitutionalFlowPoint[]> {
+  const startDate = rangeToStartDate(range);
+  const endDate = new Date().toISOString().slice(0, 10);
+  const rows = await callFinMind<FinMindInstitutionalRow>({
+    dataset: "TaiwanStockInstitutionalInvestorsBuySell",
+    data_id: symbol,
+    start_date: startDate,
+    end_date: endDate,
+  });
+
+  const byDate = new Map<string, { foreign: number; investmentTrust: number; dealer: number }>();
+  for (const row of rows) {
+    const net = toLots(row.buy - row.sell);
+    const entry = byDate.get(row.date) ?? { foreign: 0, investmentTrust: 0, dealer: 0 };
+    if (row.name === "Foreign_Investor" || row.name === "Foreign_Dealer_Self") {
+      entry.foreign += net;
+    } else if (row.name === "Investment_Trust") {
+      entry.investmentTrust += net;
+    } else if (row.name === "Dealer" || row.name === "Dealer_self" || row.name === "Dealer_Hedging") {
+      entry.dealer += net;
+    }
+    byDate.set(row.date, entry);
+  }
+
+  return Array.from(byDate.entries())
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([date, v]) => ({
+      date,
+      foreign: v.foreign,
+      investmentTrust: v.investmentTrust,
+      dealer: v.dealer,
+      total: v.foreign + v.investmentTrust + v.dealer,
+    }));
+}
+
+export async function getInstitutionalFlow(
+  symbol: string,
+  range: HistoryRange
+): Promise<InstitutionalFlowPoint[]> {
+  return withCache(`finmind:institutional:${symbol}:${range}`, 10 * 60 * 1000, () =>
+    fetchInstitutionalFlow(symbol, range)
+  );
+}
+
+async function fetchMarginTrading(symbol: string, range: HistoryRange): Promise<MarginTradingPoint[]> {
+  const startDate = rangeToStartDate(range);
+  const endDate = new Date().toISOString().slice(0, 10);
+  const rows = await callFinMind<FinMindMarginRow>({
+    dataset: "TaiwanStockMarginPurchaseShortSale",
+    data_id: symbol,
+    start_date: startDate,
+    end_date: endDate,
+  });
+  return rows.map((r) => ({
+    date: r.date,
+    marginBalance: r.MarginPurchaseTodayBalance,
+    marginChange: r.MarginPurchaseTodayBalance - r.MarginPurchaseYesterdayBalance,
+    shortBalance: r.ShortSaleTodayBalance,
+    shortChange: r.ShortSaleTodayBalance - r.ShortSaleYesterdayBalance,
+  }));
+}
+
+export async function getMarginTrading(
+  symbol: string,
+  range: HistoryRange
+): Promise<MarginTradingPoint[]> {
+  return withCache(`finmind:margin:${symbol}:${range}`, 10 * 60 * 1000, () =>
+    fetchMarginTrading(symbol, range)
   );
 }
 

@@ -2,6 +2,8 @@ import type {
   ApiErrorBody,
   HistoryPoint,
   HistoryRange,
+  InstitutionalFlowPoint,
+  MarginTradingPoint,
   StockInfo,
   StockQuote,
   StockSummary,
@@ -45,5 +47,23 @@ export function fetchHistory(
 ): Promise<HistoryPoint[]> {
   return getJson(
     `/api/stocks/${encodeURIComponent(symbol)}/history?range=${range}`
+  );
+}
+
+export function fetchInstitutionalFlow(
+  symbol: string,
+  range: HistoryRange
+): Promise<InstitutionalFlowPoint[]> {
+  return getJson(
+    `/api/stocks/${encodeURIComponent(symbol)}/institutional?range=${range}`
+  );
+}
+
+export function fetchMarginTrading(
+  symbol: string,
+  range: HistoryRange
+): Promise<MarginTradingPoint[]> {
+  return getJson(
+    `/api/stocks/${encodeURIComponent(symbol)}/margin?range=${range}`
   );
 }

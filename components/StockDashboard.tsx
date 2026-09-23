@@ -5,11 +5,15 @@ import { QuoteCard } from "@/components/QuoteCard";
 import { CandlestickChart } from "@/components/CandlestickChart";
 import { KDChart } from "@/components/KDChart";
 import { MACDChart } from "@/components/MACDChart";
+import { InstitutionalFlowChart } from "@/components/InstitutionalFlowChart";
+import { MarginTradingChart } from "@/components/MarginTradingChart";
 import { RangeSelector } from "@/components/RangeSelector";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { useStockQuote } from "@/hooks/useStockQuote";
 import { useStockHistory } from "@/hooks/useStockHistory";
 import { useStockInfo } from "@/hooks/useStockInfo";
+import { useInstitutionalFlow } from "@/hooks/useInstitutionalFlow";
+import { useMarginTrading } from "@/hooks/useMarginTrading";
 import { computeTechnicalSeries, sliceByRange } from "@/lib/indicators";
 import type { HistoryRange } from "@/types/stock";
 
@@ -28,11 +32,32 @@ export function StockDashboard({ symbol }: StockDashboardProps) {
     error: historyError,
     refetch: refetchHistory,
   } = useStockHistory(symbol);
+  const {
+    data: institutionalFlow,
+    loading: institutionalLoading,
+    error: institutionalError,
+    refetch: refetchInstitutional,
+  } = useInstitutionalFlow(symbol);
+  const {
+    data: marginTrading,
+    loading: marginLoading,
+    error: marginError,
+    refetch: refetchMargin,
+  } = useMarginTrading(symbol);
 
   const visibleSeries = useMemo(() => {
     const full = computeTechnicalSeries(history);
     return sliceByRange(full, range);
   }, [history, range]);
+
+  const visibleInstitutionalFlow = useMemo(
+    () => sliceByRange(institutionalFlow, range),
+    [institutionalFlow, range]
+  );
+  const visibleMarginTrading = useMemo(
+    () => sliceByRange(marginTrading, range),
+    [marginTrading, range]
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -65,6 +90,30 @@ export function StockDashboard({ symbol }: StockDashboardProps) {
             <MACDChart data={visibleSeries} />
           </div>
         </>
+      )}
+
+      <h3 className="mt-2 text-sm font-medium text-gray-400">籌碼面（僅供參考，非投資建議）</h3>
+
+      {institutionalLoading && institutionalFlow.length === 0 && (
+        <div className="flex h-56 animate-pulse items-center justify-center rounded-xl border border-gray-800 bg-gray-900 text-sm text-gray-500">
+          載入法人買賣超中…
+        </div>
+      )}
+      {institutionalError && (
+        <ErrorBanner message={institutionalError} onRetry={refetchInstitutional} />
+      )}
+      {!institutionalError && institutionalFlow.length > 0 && (
+        <InstitutionalFlowChart data={visibleInstitutionalFlow} />
+      )}
+
+      {marginLoading && marginTrading.length === 0 && (
+        <div className="flex h-56 animate-pulse items-center justify-center rounded-xl border border-gray-800 bg-gray-900 text-sm text-gray-500">
+          載入融資融券中…
+        </div>
+      )}
+      {marginError && <ErrorBanner message={marginError} onRetry={refetchMargin} />}
+      {!marginError && marginTrading.length > 0 && (
+        <MarginTradingChart data={visibleMarginTrading} />
       )}
     </div>
   );
